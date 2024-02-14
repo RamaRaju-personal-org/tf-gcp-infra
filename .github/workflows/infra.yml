@@ -1,0 +1,25 @@
+name: 'Infra status check'
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  infra:
+    name: 'Terraform Format and Validate'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        
+
+      - name: Terraform Format and validate
+        run: |
+         terraform fmt -check
+         terraform init
+         terraform validate
