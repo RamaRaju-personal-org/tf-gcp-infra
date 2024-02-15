@@ -68,5 +68,14 @@ variable "source_ranges" {
 variable "dest_range" {
   description = "destination range"
   type        = string
+}
 
+variable "subnet1_name" {
+  description = "subnet 1 name"
+  type        = string
+}
+
+variable "subnet2_name" {
+  description = "subnet 2 name"
+  type        = string
 }
