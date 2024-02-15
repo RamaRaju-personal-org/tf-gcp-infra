@@ -1,12 +1,14 @@
 
 provider "google" {
+  # Configuration options
+
   project = var.project
   region  = var.region
   zone    = var.zone
 }
 
 
-resource "google_compute_network" "asssignment-3" {
+resource "google_compute_network" "custom_vpc" {
   name                            = var.vpc_name
   auto_create_subnetworks         = false
   routing_mode                    = var.routing_mode
@@ -17,7 +19,7 @@ resource "google_compute_subnetwork" "webapp" {
   name          = "webapp"
   ip_cidr_range = var.webapp_ip_cidr_range
   region        = var.region
-  network       = google_compute_network.asssignment-3.id
+  network       = google_compute_network.custom_vpc.id
 
 }
 
@@ -25,12 +27,12 @@ resource "google_compute_subnetwork" "db" {
   name          = "db"
   ip_cidr_range = var.db_ip_cidr_range
   region        = var.region
-  network       = google_compute_network.asssignment-3.id
+  network       = google_compute_network.custom_vpc.id
 }
 
 resource "google_compute_firewall" "allow-traffic-webapp" {
   name    = "allow-traffic-webapp"
-  network = google_compute_network.asssignment-3.id
+  network = google_compute_network.custom_vpc.id
 
   allow {
     protocol = var.protocol
@@ -43,7 +45,7 @@ resource "google_compute_firewall" "allow-traffic-webapp" {
 
 resource "google_compute_firewall" "allow-internal-db" {
   name    = "allow-internal-db"
-  network = google_compute_network.asssignment-3.id
+  network = google_compute_network.custom_vpc.id
 
   allow {
     protocol = var.protocol
@@ -57,12 +59,12 @@ resource "google_compute_firewall" "allow-internal-db" {
 resource "google_compute_route" "a3-routes" {
   name             = "a3-routes"
   dest_range       = var.dest_range
-  network          = google_compute_network.asssignment-3.id
+  network          = google_compute_network.custom_vpc.id
   next_hop_gateway = "default-internet-gateway"
 }
 
 
 
 output "display_VPC" {
-  value = google_compute_network.asssignment-3
+  value = google_compute_network.custom_vpc
 }
