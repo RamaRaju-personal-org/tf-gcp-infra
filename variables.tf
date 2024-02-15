@@ -22,10 +22,7 @@ variable "vpc_name" {
 
 }
 
-variable "auto_create_subnetworks" {
-  description = "mode selected"
-  
-}
+
 
 variable "routing_mode" {
   description = "selected routing mode"
