@@ -31,7 +31,7 @@ resource "google_compute_subnetwork" "subnet2" {
 }
 
 resource "google_compute_firewall" "allow-traffic-subnet1-webapp" {
-  name    = "allow-traffic-subet1-webapp"
+  name    = var.firewall1_name
   network = google_compute_network.custom_vpc.id
 
   allow {
@@ -40,11 +40,11 @@ resource "google_compute_firewall" "allow-traffic-subnet1-webapp" {
   }
 
   source_ranges = [var.source_ranges]
-  target_tags   = ["subnet1"]
+  target_tags   = [var.subnet1_name]
 }
 
 resource "google_compute_firewall" "allow-internal-subnet2-db" {
-  name    = "allow-internal-subnet2-db"
+  name    = var.firewall2_name
   network = google_compute_network.custom_vpc.id
 
   allow {
@@ -52,18 +52,73 @@ resource "google_compute_firewall" "allow-internal-subnet2-db" {
     ports    = [var.db_ports]
   }
 
-  source_tags   = ["subnet1"] # Allow traffic from only webapp instances
-  target_tags   = ["subnet2"] # allow traffic to db instances
+  source_tags   = [var.subnet1_name] # Allow traffic from only webapp instances
+  target_tags   = [var.subnet2_name] # allow traffic to db instances
 }
 
 resource "google_compute_route" "custom-routes" {
-  name             = "custom-routes"
+  name             = var.route_name
   dest_range       = var.dest_range
   network          = google_compute_network.custom_vpc.id
   next_hop_gateway = "default-internet-gateway"
 }
 
 
+
+# New resource for the compute instance
+resource "google_compute_instance" "my_instance" {
+  name         = var.instance_name
+  machine_type = var.machine_type # Replace with your desired machine type
+  zone         = var.zone
+
+  boot_disk {
+    initialize_params {
+      image = var.packer_image # Replace with the actual name or URL of the custom image
+      type  = var.disk_type
+      size  = var.disk_size
+    }
+  }
+
+  network_interface {
+    network = google_compute_network.custom_vpc.name
+    subnetwork = google_compute_subnetwork.subnet1.name
+
+    access_config {
+
+    }
+  }
+   tags = ["my-application-instance"]
+
+}
+
+# resource "google_compute_firewall" "ssh-access-for-my-ip" {
+#   name    = var.ssh_name
+#   network = google_compute_network.custom_vpc.id
+
+#   allow {
+#     protocol = var.protocol
+#     ports    = ["22"]
+#   }
+
+#   source_ranges = [var.gcp_default_ip] # Replace with your actual IP address
+#   target_tags   = ["my-application-instance"]  # Apply this rule to instances in subnet1
+# }
+
+
+
+
+resource "google_compute_firewall" "allow-access-to-application-port" {
+  name    = var.access_application_port_name
+  network = google_compute_network.custom_vpc.id
+
+  allow {
+    protocol = var.protocol
+    ports    = [var.ports]
+  }
+
+  source_ranges = [var.source_ranges] # Replace with your actual IP address
+  target_tags   = ["my-application-instance"]  # Apply this rule to instances in subnet1
+}
 
 output "display_VPC" {
   value = google_compute_network.custom_vpc

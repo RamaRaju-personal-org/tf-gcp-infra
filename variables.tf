@@ -76,3 +76,58 @@ variable "subnet2_name" {
   description = "subnet 2 name"
   type        = string
 }
+
+variable "firewall1_name" {
+  description = "firewall1_name"
+  type        = string
+}
+
+variable "firewall2_name" {
+  description = "firewall2_name"
+  type        = string
+}
+
+variable "route_name" {
+  description = "route_name"
+  type        = string
+}
+
+variable "instance_name" {
+  description = "instance_name"
+  type        = string
+}
+
+variable "machine_type" {
+  description = "machine_type"
+  type        = string
+}
+
+variable "packer_image" {
+  description = "packer_image"
+  type        = string
+}
+
+variable "disk_type" {
+  description = "disk_type"
+  type        = string
+}
+
+variable "disk_size" {
+  description = "disk_size"
+  type        = string
+}
+
+# variable "ssh_name" {
+#   description = "ssh_name"
+#   type        = string
+# }
+
+# variable "gcp_default_ip" {
+#   description = "my_ip"
+#   type        = string
+# }
+
+variable "access_application_port_name" {
+  description = "access_application_port_name"
+  type        = string
+}
