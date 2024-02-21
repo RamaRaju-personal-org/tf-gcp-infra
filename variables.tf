@@ -117,15 +117,17 @@ variable "disk_size" {
   type        = string
 }
 
-# variable "ssh_name" {
-#   description = "ssh_name"
-#   type        = string
-# }
+variable "ssh_name" {
+  description = "ssh_name"
+  type        = string
+}
 
-# variable "gcp_default_ip" {
-#   description = "my_ip"
-#   type        = string
-# }
+variable "no_access_port" {
+  description = "no_access_port"
+  type        = string
+}
+
+
 
 variable "access_application_port_name" {
   description = "access_application_port_name"
