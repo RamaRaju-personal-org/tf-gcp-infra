@@ -91,18 +91,18 @@ resource "google_compute_instance" "my_instance" {
 
 }
 
-# resource "google_compute_firewall" "ssh-access-for-my-ip" {
-#   name    = var.ssh_name
-#   network = google_compute_network.custom_vpc.id
+resource "google_compute_firewall" "ssh-deny-for-all-ip" {
+  name    = var.ssh_name
+  network = google_compute_network.custom_vpc.id
 
-#   allow {
-#     protocol = var.protocol
-#     ports    = ["22"]
-#   }
+  deny {
+    protocol = var.protocol
+    ports    = [var.no_access_port]
+  }
 
-#   source_ranges = [var.gcp_default_ip] # Replace with your actual IP address
-#   target_tags   = ["my-application-instance"]  # Apply this rule to instances in subnet1
-# }
+  source_ranges = [var.source_ranges] 
+  target_tags   = ["my-application-instance"]  # Apply this rule to instances in subnet1
+}
 
 
 
