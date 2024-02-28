@@ -20,7 +20,6 @@ jobs:
 
       - name: Terraform Format and validate
         run: |
-         terraform fmt
          terraform fmt -check
          terraform init
          terraform validate
