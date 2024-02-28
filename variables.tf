@@ -41,6 +41,11 @@ variable "db_ip_cidr_range" {
   type        = string
 }
 
+# variable "db_private_ip" {
+#   description = "db private ip"
+#   type        = string
+# }
+
 variable "protocol" {
   description = "protocol"
   type        = string
@@ -55,11 +60,13 @@ variable "ports" {
 
 variable "db_ports" {
   description = "db ports"
+  type        = string
 }
 
 variable "source_ranges" {
   description = "source range"
   type        = string
+
 }
 
 variable "dest_range" {
@@ -131,5 +138,15 @@ variable "no_access_port" {
 
 variable "access_application_port_name" {
   description = "access_application_port_name"
+  type        = string
+}
+
+variable "sql_db_name" {
+  description = "sql_db_name"
+  type        = string
+}
+
+variable "sql_db_user" {
+  description = "sql_db_user"
   type        = string
 }

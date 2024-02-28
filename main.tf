@@ -1,12 +1,23 @@
-
 provider "google" {
-  # Configuration options
-
   project = var.project
   region  = var.region
   zone    = var.zone
 }
 
+provider "random" {
+}
+
+resource "random_password" "password" {
+  length           = 16
+  special          = true
+  override_special = "_%@"
+}
+
+resource "random_string" "instance_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+}
 
 resource "google_compute_network" "custom_vpc" {
   name                            = var.vpc_name
@@ -15,21 +26,31 @@ resource "google_compute_network" "custom_vpc" {
   delete_default_routes_on_create = true
 }
 
+resource "google_compute_route" "custom-routes" {
+  name             = var.route_name
+  dest_range       = var.dest_range
+  network          = google_compute_network.custom_vpc.id
+  next_hop_gateway = "default-internet-gateway"
+}
+
+
+
 resource "google_compute_subnetwork" "subnet1" {
   name          = var.subnet1_name
   ip_cidr_range = var.webapp_ip_cidr_range
   region        = var.region
   network       = google_compute_network.custom_vpc.id
-
 }
 
 resource "google_compute_subnetwork" "subnet2" {
-  name          = var.subnet2_name
-  ip_cidr_range = var.db_ip_cidr_range
-  region        = var.region
-  network       = google_compute_network.custom_vpc.id
+  name                     = var.subnet2_name
+  ip_cidr_range            = var.db_ip_cidr_range
+  region                   = var.region
+  network                  = google_compute_network.custom_vpc.id
+  private_ip_google_access = true
 }
 
+// allow traffic on port 3307 to the subnet
 resource "google_compute_firewall" "allow-traffic-subnet1-webapp" {
   name    = var.firewall1_name
   network = google_compute_network.custom_vpc.id
@@ -43,7 +64,22 @@ resource "google_compute_firewall" "allow-traffic-subnet1-webapp" {
   target_tags   = [var.subnet1_name]
 }
 
-resource "google_compute_firewall" "allow-internal-subnet2-db" {
+
+// allow traffic on port 3307 to the webapp instance where the application is running
+resource "google_compute_firewall" "allow-access-to-application-port" {
+  name    = var.access_application_port_name
+  network = google_compute_network.custom_vpc.id
+
+  allow {
+    protocol = var.protocol
+    ports    = [var.ports]
+  }
+
+  source_ranges = [var.source_ranges]
+  target_tags   = ["webapp-instance-tag"] # Apply this rule to instances in subnet1
+}
+
+resource "google_compute_firewall" "allow-db-access" {
   name    = var.firewall2_name
   network = google_compute_network.custom_vpc.id
 
@@ -52,44 +88,126 @@ resource "google_compute_firewall" "allow-internal-subnet2-db" {
     ports    = [var.db_ports]
   }
 
-  source_tags   = [var.subnet1_name] # Allow traffic from only webapp instances
-  target_tags   = [var.subnet2_name] # allow traffic to db instances
-}
-
-resource "google_compute_route" "custom-routes" {
-  name             = var.route_name
-  dest_range       = var.dest_range
-  network          = google_compute_network.custom_vpc.id
-  next_hop_gateway = "default-internet-gateway"
+  source_tags = ["webapp-instance-tag"]
+  target_tags = [var.subnet2_name]
 }
 
 
 
-# New resource for the compute instance
+resource "google_compute_global_address" "private_ip_address" {
+  name          = "${var.vpc_name}-private-ip-range"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 24 //cidr range
+  network       = google_compute_network.custom_vpc.id
+}
+
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = google_compute_network.custom_vpc.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+}
+
+resource "google_sql_database_instance" "my_sql_instance" {
+  name             = "sql-instance-${random_string.instance_suffix.result}"
+  database_version = "MYSQL_5_7"
+  region           = var.region
+
+  settings {
+    tier              = "db-f1-micro"
+    availability_type = "REGIONAL" // enabling "REGIONAL" will ask you to enable binary logging for High availabilty.
+    // if you don't need HA go with ZONAL
+    disk_size = var.disk_size
+    disk_type = "PD_SSD"
+    backup_configuration {
+      enabled            = true
+      binary_log_enabled = true
+    }
+
+    ip_configuration {
+      ipv4_enabled    = false
+      private_network = google_compute_network.custom_vpc.self_link
+      # Correct reference to the VPC network
+
+    }
+  }
+
+  deletion_protection = false
+  depends_on = [
+    google_service_networking_connection.private_vpc_connection
+  ]
+
+}
+
+resource "google_sql_database" "webapp_db" {
+  name     = var.sql_db_name
+  instance = google_sql_database_instance.my_sql_instance.name
+}
+
+resource "google_sql_user" "webapp_user" {
+  name     = var.sql_db_user
+  instance = google_sql_database_instance.my_sql_instance.name
+  password = random_password.password.result
+}
+
+
+
+# Compute Engine Instance with Startup Script
 resource "google_compute_instance" "my_instance" {
   name         = var.instance_name
-  machine_type = var.machine_type # Replace with your desired machine type
+  machine_type = var.machine_type
   zone         = var.zone
 
   boot_disk {
     initialize_params {
-      image = var.packer_image # Replace with the actual name or URL of the custom image
+      image = var.packer_image
       type  = var.disk_type
       size  = var.disk_size
     }
   }
 
   network_interface {
-    network = google_compute_network.custom_vpc.name
-    subnetwork = google_compute_subnetwork.subnet1.name
+    network    = google_compute_network.custom_vpc.id
+    subnetwork = google_compute_subnetwork.subnet1.id
 
+    //public ip allocation
     access_config {
 
     }
   }
-   tags = ["my-application-instance"]
 
+
+  tags = ["webapp-instance-tag"]
+
+
+  depends_on = [
+    google_sql_database_instance.my_sql_instance,
+    google_sql_user.webapp_user,
+    google_service_networking_connection.private_vpc_connection,
+    google_compute_firewall.allow-access-to-application-port
+  ]
+
+
+  metadata_startup_script = <<-EOF
+      #!/bin/bash
+      mkdir -p /opt/csye6225
+      chown csye6225:csye6225 /opt/csye6225
+      cat <<-EOL > /opt/csye6225/.env
+      DB_NAME=${google_sql_database.webapp_db.name}
+      DB_USER=${google_sql_user.webapp_user.name}
+      DB_PASSWORD=${random_password.password.result}
+      DB_HOST=${google_sql_database_instance.my_sql_instance.private_ip_address}
+      PORT=3307
+      EOL
+      cd
+      sudo systemctl daemon-reload
+      sudo systemctl enable nodeapp
+      sudo systemctl restart nodeapp
+    EOF
 }
+
+
+
 
 resource "google_compute_firewall" "ssh-deny-for-all-ip" {
   name    = var.ssh_name
@@ -100,26 +218,35 @@ resource "google_compute_firewall" "ssh-deny-for-all-ip" {
     ports    = [var.no_access_port]
   }
 
-  source_ranges = [var.source_ranges] 
-  target_tags   = ["my-application-instance"]  # Apply this rule to instances in subnet1
+  source_ranges = [var.source_ranges]
+  target_tags   = ["webapp-instance-tag"] # Apply this rule to instances in subnet1
 }
 
+//ssh allow for google compute & commented, also add the tag to compute instance when using allow_ssh
+# resource "google_compute_firewall" "allow_ssh" {
+#   name    = "ssh-allow"
+#   network = google_compute_network.custom_vpc.self_link
+
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["22"]
+#   }
+
+#   // Use source ranges to define IP ranges that are allowed to access
+#   source_ranges = ["0.0.0.0/0"]  // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
+
+#   target_tags = ["ssh-access"]  // Apply this rule to instances tagged with "ssh-access"
+# }
 
 
 
-resource "google_compute_firewall" "allow-access-to-application-port" {
-  name    = var.access_application_port_name
-  network = google_compute_network.custom_vpc.id
 
-  allow {
-    protocol = var.protocol
-    ports    = [var.ports]
-  }
 
-  source_ranges = [var.source_ranges] # Replace with your actual IP address
-  target_tags   = ["my-application-instance"]  # Apply this rule to instances in subnet1
+# Outputs
+output "instance_name" {
+  value = google_compute_instance.my_instance.name
 }
 
-output "display_VPC" {
-  value = google_compute_network.custom_vpc
+output "sql_instance_private_ip" {
+  value = google_sql_database_instance.my_sql_instance.private_ip_address
 }
