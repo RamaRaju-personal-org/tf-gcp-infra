@@ -1,5 +1,6 @@
 .DS_Store
 .terraform.lock.hcl
+infra.json
 # Local .terraform directories
 **/.terraform/*
 
