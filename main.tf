@@ -128,7 +128,10 @@ resource "google_sql_database_instance" "my_sql_instance" {
       ipv4_enabled    = false
       private_network = google_compute_network.custom_vpc.self_link
       # Correct reference to the VPC network
-
+      # authorized_networks {
+      #   name  = "subnet1"
+      #   value = google_compute_subnetwork.subnet1.ip_cidr_range
+      # }
     }
   }
 
@@ -177,7 +180,7 @@ resource "google_compute_instance" "my_instance" {
   }
 
 
-  tags = ["webapp-instance-tag"]
+  tags = ["webapp-instance-tag", "ssh-access"]
 
 
   depends_on = [
@@ -204,44 +207,81 @@ resource "google_compute_instance" "my_instance" {
       sudo systemctl enable nodeapp
       sudo systemctl restart nodeapp
     EOF
-}
 
-
-
-
-resource "google_compute_firewall" "ssh-deny-for-all-ip" {
-  name    = var.ssh_name
-  network = google_compute_network.custom_vpc.id
-
-  deny {
-    protocol = var.protocol
-    ports    = [var.no_access_port]
+    service_account {
+    email  = google_service_account.vm_service_account.email
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
-
-  source_ranges = [var.source_ranges]
-  target_tags   = ["webapp-instance-tag"] # Apply this rule to instances in subnet1
 }
 
-//ssh allow for google compute & commented, also add the tag to compute instance when using allow_ssh
-# resource "google_compute_firewall" "allow_ssh" {
-#   name    = "ssh-allow"
-#   network = google_compute_network.custom_vpc.self_link
 
-#   allow {
-#     protocol = "tcp"
-#     ports    = ["22"]
+
+
+# resource "google_compute_firewall" "ssh-deny-for-all-ip" {
+#   name    = var.ssh_name
+#   network = google_compute_network.custom_vpc.id
+
+#   deny {
+#     protocol = var.protocol
+#     ports    = [var.no_access_port]
 #   }
 
-#   // Use source ranges to define IP ranges that are allowed to access
-#   source_ranges = ["0.0.0.0/0"]  // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
-
-#   target_tags = ["ssh-access"]  // Apply this rule to instances tagged with "ssh-access"
+#   source_ranges = [var.source_ranges]
+#   target_tags   = ["webapp-instance-tag"] # Apply this rule to instances in subnet1
 # }
 
+//ssh allow for google compute & commented, also add the tag to compute instance when using allow_ssh
+resource "google_compute_firewall" "allow_ssh" {
+  name    = "ssh-allow"
+  network = google_compute_network.custom_vpc.self_link
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  // Use source ranges to define IP ranges that are allowed to access
+  source_ranges = ["0.0.0.0/0"]  // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
+
+  target_tags = ["ssh-access"]  // Apply this rule to instances tagged with "ssh-access"
+}
 
 
+# get the managed dns zone 
+data "google_dns_managed_zone" "dns_zone"{
+  name = "ram-public-zone"
+}
+
+#add the ip address to the dns i.e adding A record 
+resource "google_dns_record_set" "website" {
+  name         = "ramaraju.me."
+  type         = "A"
+  ttl          = 300
+  managed_zone = data.google_dns_managed_zone.dns_zone.name
+  rrdatas      = [google_compute_instance.my_instance.network_interface.0.access_config.0.nat_ip]
+}
+
+resource "google_service_account" "vm_service_account" {
+  account_id   = "my-vm-service-account"
+  display_name = "Service Account for VM Instances"
+}
 
 
+resource "google_project_iam_binding" "logging_admin" {
+  project = var.project
+  role    = "roles/logging.admin"
+  members = [
+    "serviceAccount:${google_service_account.vm_service_account.email}",
+  ]
+}
+
+resource "google_project_iam_binding" "monitoring_metric_writer" {
+  project = var.project
+  role    = "roles/monitoring.metricWriter"
+  members = [
+    "serviceAccount:${google_service_account.vm_service_account.email}",
+  ]
+}
 # Outputs
 output "instance_name" {
   value = google_compute_instance.my_instance.name
