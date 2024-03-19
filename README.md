@@ -12,3 +12,4 @@ compute.instanceAdmin.v1
 iam.serviceAccountUser
 iap.tunnelResourceAccessor
 ```
+enable : cloud monitoring for ops Api  & cloud looging api 
