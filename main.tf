@@ -208,7 +208,7 @@ resource "google_compute_instance" "my_instance" {
       sudo systemctl restart nodeapp
     EOF
 
-    service_account {
+  service_account {
     email  = google_service_account.vm_service_account.email
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
@@ -241,14 +241,14 @@ resource "google_compute_firewall" "allow_ssh" {
   }
 
   // Use source ranges to define IP ranges that are allowed to access
-  source_ranges = ["0.0.0.0/0"]  // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
+  source_ranges = ["0.0.0.0/0"] // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
 
-  target_tags = ["ssh-access"]  // Apply this rule to instances tagged with "ssh-access"
+  target_tags = ["ssh-access"] // Apply this rule to instances tagged with "ssh-access"
 }
 
 
 # get the managed dns zone 
-data "google_dns_managed_zone" "dns_zone"{
+data "google_dns_managed_zone" "dns_zone" {
   name = "ram-public-zone"
 }
 
