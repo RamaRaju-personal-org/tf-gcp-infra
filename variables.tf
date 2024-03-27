@@ -150,3 +150,57 @@ variable "sql_db_user" {
   description = "sql_db_user"
   type        = string
 }
+
+
+variable "spf_rrdata" {
+  description = "SPF record data"
+  type        = list(string)
+}
+
+variable "dkim_rrdata" {
+  description = "DKIM record data"
+  type        = list(string)
+}
+
+variable "mx_rrdatas" {
+  description = "MX record data"
+  type        = list(string)
+}
+
+variable "cname_rrdata" {
+  description = "CNAME record data for tracking"
+  type        = list(string)
+}
+
+# Variables declaration in your .tf files
+
+variable "spf_name" {
+  description = "The name of the SPF DNS record"
+  type        = string
+}
+
+variable "dkim_name" {
+  description = "The name of the DKIM DNS record"
+  type        = string
+}
+
+variable "mx_name" {
+  description = "The names of the MX DNS records"
+  type        = string
+}
+
+variable "cname_name" {
+  description = "The name of the CNAME DNS record for tracking"
+  type        = string
+}
+
+variable "mailgun_api_key" {
+  description = "mail gun api key"
+  type        = string
+}
+
+
+variable "mailgun_domain" {
+  description = "Mailgun domain for sending emails"
+  type        = string
+}

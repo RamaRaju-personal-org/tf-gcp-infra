@@ -3,7 +3,7 @@
 infra.json
 # Local .terraform directories
 **/.terraform/*
-
+*.zip
 # .tfstate files
 *.tfstate
 *.tfstate.*
