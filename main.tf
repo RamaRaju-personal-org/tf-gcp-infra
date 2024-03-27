@@ -439,12 +439,12 @@ resource "google_cloudfunctions2_function" "email_verification" {
 
     environment_variables = {
       // Define your environment variables here
-      DB_NAME         = google_sql_database.webapp_db.name
-      DB_USER         = google_sql_user.webapp_user.name
-      DB_PASSWORD     = random_password.password.result
-      DB_HOST         = google_sql_database_instance.my_sql_instance.private_ip_address
-      MAILGUN_API_KEY = var.mailgun_api_key
-      MAILGUN_DOMAIN  = var.mailgun_domain
+      DB_NAME                  = google_sql_database.webapp_db.name
+      DB_USER                  = google_sql_user.webapp_user.name
+      DB_PASSWORD              = random_password.password.result
+      DB_HOST                  = google_sql_database_instance.my_sql_instance.private_ip_address
+      MAILGUN_API_KEY          = var.mailgun_api_key
+      MAILGUN_DOMAIN           = var.mailgun_domain
       INSTANCE_CONNECTION_NAME = "${var.project}:${var.region}:${google_sql_database_instance.my_sql_instance.name}"
 
       // Any other env vars your function needs
@@ -452,7 +452,7 @@ resource "google_cloudfunctions2_function" "email_verification" {
 
   }
 
-        
+
 
   service_config {
     available_memory               = "256M" // Match this to the expected memory need of your function
