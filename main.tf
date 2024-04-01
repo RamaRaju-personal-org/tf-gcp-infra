@@ -47,11 +47,11 @@ resource "google_compute_route" "custom-routes" {
 
 
 resource "google_compute_subnetwork" "subnet1" {
-  name          = var.subnet1_name
-  ip_cidr_range = var.webapp_ip_cidr_range
-  region        = var.region
-  network       = google_compute_network.custom_vpc.id
-  private_ip_google_access = true  // Enable Private Google Access
+  name                     = var.subnet1_name
+  ip_cidr_range            = var.webapp_ip_cidr_range
+  region                   = var.region
+  network                  = google_compute_network.custom_vpc.id
+  private_ip_google_access = true // Enable Private Google Access
 }
 
 resource "google_compute_subnetwork" "subnet2" {
