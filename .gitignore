@@ -8,6 +8,8 @@ infra.json
 *.tfstate
 *.tfstate.*
 
+f.zip
+
 # Crash log files
 crash.log
 crash.*.log

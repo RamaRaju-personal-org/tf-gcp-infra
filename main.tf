@@ -239,34 +239,34 @@ resource "google_sql_user" "webapp_user" {
 
 
 
-# resource "google_compute_firewall" "ssh-deny-for-all-ip" {
-#   name    = var.ssh_name
-#   network = google_compute_network.custom_vpc.id
+resource "google_compute_firewall" "ssh-deny-for-all-ip" {
+  name    = var.ssh_name
+  network = google_compute_network.custom_vpc.id
 
-#   deny {
-#     protocol = var.protocol
-#     ports    = [var.no_access_port]
-#   }
-
-#   source_ranges = [var.source_ranges]
-#   target_tags   = ["webapp-instance-tag"] # Apply this rule to instances in subnet1
-# }
-
-//ssh allow for google compute & commented, also add the tag to compute instance when using allow_ssh
-resource "google_compute_firewall" "allow_ssh" {
-  name    = "ssh-allow"
-  network = google_compute_network.custom_vpc.self_link
-
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
+  deny {
+    protocol = var.protocol
+    ports    = [var.no_access_port]
   }
 
-  // Use source ranges to define IP ranges that are allowed to access
-  source_ranges = ["0.0.0.0/0"] // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
-
-  target_tags = ["ssh-access"] // Apply this rule to instances tagged with "ssh-access"
+  source_ranges = [var.source_ranges]
+  target_tags   = ["webapp-instance-tag"] # Apply this rule to instances in subnet1
 }
+
+//ssh allow for google compute & commented, also add the tag to compute instance when using allow_ssh
+# resource "google_compute_firewall" "allow_ssh" {
+#   name    = "ssh-allow"
+#   network = google_compute_network.custom_vpc.self_link
+
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["22"]
+#   }
+
+#   // Use source ranges to define IP ranges that are allowed to access
+#   source_ranges = ["0.0.0.0/0"] // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
+
+#   target_tags = ["ssh-access"] // Apply this rule to instances tagged with "ssh-access"
+# }
 
 
 
@@ -673,12 +673,15 @@ resource "google_compute_instance_template" "webapp_template" {
   network_interface {
     network    = google_compute_network.custom_vpc.self_link
     subnetwork = google_compute_subnetwork.subnet1.self_link
+
+    access_config {
+    }
   }
 
   lifecycle {
     create_before_destroy = true
   }
-  tags = ["webapp-lb-target", "ssh-access", "webapp-instance-tag"] # This tag is used in the firewall rule
+  tags = ["webapp-lb-target", "webapp-instance-tag"] # This tag is used in the firewall rule
 
   metadata = {
     startup-script = <<-EOT
@@ -754,7 +757,9 @@ resource "google_compute_region_instance_group_manager" "webapp_manager" {
   named_port {
     name = "http"
     //This name given to the 'named_port' in the MIG must match the 'port_name' in the 'google_compute_backend_service'
-    port = "3307"
+    # port = "3307"
+    port = var.ports
+
   }
   update_policy {
 
@@ -791,7 +796,8 @@ resource "google_compute_firewall" "webapp_allow_lb" {
   network = google_compute_network.custom_vpc.self_link # Reference to your network resource
 
   allow {
-    protocol = "tcp"
+    # protocol = "tcp"
+    protocol = var.protocol
     ports    = ["80", "443"]
   }
 
@@ -836,7 +842,7 @@ resource "google_compute_target_https_proxy" "default" {
 resource "google_compute_managed_ssl_certificate" "default" {
   name = "webapp-ssl-cert"
   managed {
-    domains = ["ramaraju.me"]
+    domains = [var.mailgun_domain]
   }
 }
 
