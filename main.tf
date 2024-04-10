@@ -400,34 +400,34 @@ resource "google_sql_user" "webapp_user" {
 
 
 
-# resource "google_compute_firewall" "ssh-deny-for-all-ip" {
-#   name    = var.ssh_name
-#   network = google_compute_network.custom_vpc.id
+resource "google_compute_firewall" "ssh-deny-for-all-ip" {
+  name    = var.ssh_name
+  network = google_compute_network.custom_vpc.id
 
-#   deny {
-#     protocol = var.protocol
-#     ports    = [var.no_access_port]
-#   }
-
-#   source_ranges = [var.source_ranges]
-#   target_tags   = ["webapp-instance-tag"] # Apply this rule to instances in subnet1
-# }
-
-//ssh allow for google compute & commented, also add the tag to compute instance when using allow_ssh
-resource "google_compute_firewall" "allow_ssh" {
-  name    = "ssh-allow"
-  network = google_compute_network.custom_vpc.self_link
-
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
+  deny {
+    protocol = var.protocol
+    ports    = [var.no_access_port]
   }
 
-  // Use source ranges to define IP ranges that are allowed to access
-  source_ranges = ["0.0.0.0/0"] // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
-
-  target_tags = ["ssh-access"] // Apply this rule to instances tagged with "ssh-access"
+  source_ranges = [var.source_ranges]
+  target_tags   = ["webapp-instance-tag"] # Apply this rule to instances in subnet1
 }
+
+//ssh allow for google compute & commented, also add the tag to compute instance when using allow_ssh
+# resource "google_compute_firewall" "allow_ssh" {
+#   name    = "ssh-allow"
+#   network = google_compute_network.custom_vpc.self_link
+
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["22"]
+#   }
+
+#   // Use source ranges to define IP ranges that are allowed to access
+#   source_ranges = ["0.0.0.0/0"] // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
+
+#   target_tags = ["ssh-access"] // Apply this rule to instances tagged with "ssh-access"
+# }
 
 
 
@@ -865,7 +865,7 @@ resource "google_compute_region_instance_template" "webapp_template" {
   lifecycle {
     create_before_destroy = true
   }
-  tags = ["webapp-lb-target", "webapp-instance-tag", "ssh-access"] # This tag is used in the firewall rule
+  tags = ["webapp-lb-target", "webapp-instance-tag"] # This tag is used in the firewall rule
 
   metadata = {
     startup-script = <<-EOT
