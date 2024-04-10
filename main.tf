@@ -81,18 +81,18 @@ resource "google_compute_subnetwork" "subnet2" {
 }
 
 // allow traffic on desired port to the subnet
-resource "google_compute_firewall" "allow-traffic-subnet1-webapp" {
-  name    = var.firewall1_name
-  network = google_compute_network.custom_vpc.id
+# resource "google_compute_firewall" "allow-traffic-subnet1-webapp" {
+#   name    = var.firewall1_name
+#   network = google_compute_network.custom_vpc.id
 
-  allow {
-    protocol = var.protocol
-    ports    = [var.ports]
-  }
+#   allow {
+#     protocol = var.protocol
+#     ports    = [var.ports]
+#   }
 
-  source_ranges = [var.source_ranges]
-  target_tags   = [var.subnet1_name]
-}
+#   source_ranges = [var.source_ranges]
+#   target_tags   = [var.subnet1_name]
+# }
 
 
 // allow traffic on port 80 to the webapp instance where the application is running
@@ -414,20 +414,20 @@ resource "google_sql_user" "webapp_user" {
 # }
 
 //ssh allow for google compute & commented, also add the tag to compute instance when using allow_ssh
-# resource "google_compute_firewall" "allow_ssh" {
-#   name    = "ssh-allow"
-#   network = google_compute_network.custom_vpc.self_link
+resource "google_compute_firewall" "allow_ssh" {
+  name    = "ssh-allow"
+  network = google_compute_network.custom_vpc.self_link
 
-#   allow {
-#     protocol = "tcp"
-#     ports    = ["22"]
-#   }
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
 
-#   // Use source ranges to define IP ranges that are allowed to access
-#   source_ranges = ["0.0.0.0/0"] // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
+  // Use source ranges to define IP ranges that are allowed to access
+  source_ranges = ["0.0.0.0/0"] // CAUTION: This allows access from any IP. For production, restrict to specific IPs.
 
-#   target_tags = ["ssh-access"] // Apply this rule to instances tagged with "ssh-access"
-# }
+  target_tags = ["ssh-access"] // Apply this rule to instances tagged with "ssh-access"
+}
 
 
 
